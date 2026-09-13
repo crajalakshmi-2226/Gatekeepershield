@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GatekeepeRShield — AI Anti-Scam Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --purple-deep:#4C1A8C;
+    --purple-mid:#7A2FC7;
+    --magenta:#C21C9E;
+    --magenta-bright:#E0299A;
+    --pink-soft:#F6A9D3;
+    --pink-tint:#FDF1F8;
+    --pink-tint-2:#FBE7F4;
+    --white:#FFFFFF;
+    --ink:#2B1A3D;
+    --ink-soft:#5B4A6E;
+    --border-pink:#F1CBE6;
+    --risk-low:#1B8A4B;
+    --risk-low-bg:#E8F8EE;
+    --risk-med:#B96A08;
+    --risk-med-bg:#FDF1DE;
+    --risk-high:#C82F3A;
+    --risk-high-bg:#FCE9EA;
+    --shadow-glow:0 10px 30px rgba(124,47,199,0.14);
+    --shadow-soft:0 4px 16px rgba(124,47,199,0.08);
+    --radius-lg:22px;
+    --radius-md:16px;
+    --radius-sm:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:linear-gradient(180deg,var(--pink-tint) 0%,var(--white) 340px);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.serif{font-family:'Fraunces',serif;}
+  button{font-family:inherit;cursor:pointer;}
+  a{color:inherit;}
+  img{max-width:100%;}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+  :focus-visible{outline:3px solid var(--magenta-bright);outline-offset:2px;}
+
+  /* ---------- SPLASH ---------- */
+  #splash{
+    position:fixed;inset:0;z-index:999;overflow:hidden;
+    background:linear-gradient(135deg,#3A1370 0%, #7A2FC7 35%, #C21C9E 70%, #E0299A 100%);
+    background-size:260% 260%;
+    animation:splashShift 6s ease-in-out infinite;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:#fff;transition:opacity .6s ease, visibility .6s ease;
+  }
+  #splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
+  @keyframes splashShift{
+    0%{background-position:0% 30%;}
+    50%{background-position:100% 70%;}
+    100%{background-position:0% 30%;}
+  }
+  #splash::before{
+    content:"";position:absolute;inset:-20%;pointer-events:none;
+    background:
+      radial-gradient(circle at 22% 28%, rgba(255,255,255,0.35) 0%, transparent 32%),
+      radial-gradient(circle at 78% 68%, rgba(246,169,211,0.4) 0%, transparent 38%),
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 60%);
+    animation:splashGlow 4.5s ease-in-out infinite;
+    mix-blend-mode:screen;
+  }
+  @keyframes splashGlow{
+    0%,100%{opacity:.55;transform:scale(1);}
+    50%{opacity:1;transform:scale(1.12);}
+  }
+  #splash::after{
+    content:"";position:absolute;top:-50%;left:-20%;width:60%;height:200%;
+    background:linear-gradient(100deg,transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%);
+    animation:splashShine 3.2s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes splashShine{
+    0%{transform:translateX(-120%) rotate(8deg);}
+    55%,100%{transform:translateX(260%) rotate(8deg);}
+  }
+  .splash-shield{
+    width:110px;height:110px;position:relative;margin-bottom:22px;z-index:2;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .splash-shield .emoji{
+    font-size:74px;line-height:1;
+    filter:drop-shadow(0 0 22px rgba(255,255,255,0.85)) drop-shadow(0 0 42px rgba(246,169,211,0.9));
+    animation:shieldPulse 2.4s ease-in-out infinite;
+    display:block;
+  }
+  @keyframes shieldPulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.08);}
+  }
+  #splash h1{font-size:2.1rem;font-weight:600;margin:0 0 6px;letter-spacing:.01em;position:relative;z-index:2;text-shadow:0 0 26px rgba(255,255,255,0.55);}
+  #splash p{font-family:'Inter',sans-serif;font-size:.98rem;color:#F5E2F5;margin:0;position:relative;z-index:2;}
+  @media (prefers-reduced-motion: reduce){
+    #splash, #splash::before, #splash::after, .splash-shield .emoji{animation:none;}
+  }
+
+  /* ---------- HEADER ---------- */
+  header.top-nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px clamp(16px,4vw,40px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);
+    position:sticky;top:0;z-index:60;border-bottom:1px solid var(--border-pink);
+    flex-wrap:wrap;gap:10px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-icon{width:36px;height:36px;flex-shrink:0;}
+  .brand-text{display:flex;flex-direction:column;line-height:1.15;}
+  .brand-name{font-family:'Fraunces',serif;font-weight:600;font-size:1.18rem;color:var(--purple-deep);}
+  .brand-tag{font-size:.68rem;color:var(--ink-soft);}
+  .badge-pill{
+    display:inline-flex;align-items:center;font-size:.62rem;font-weight:700;
+    letter-spacing:.04em;padding:2px 9px;border-radius:999px;
+    background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));
+    color:#fff;margin-left:8px;
+  }
+  nav.nav-links{display:flex;gap:10px;flex-wrap:wrap;}
+  .nav-btn{
+    border:1.5px solid var(--border-pink);background:#fff;color:var(--purple-deep);
+    padding:9px 18px;border-radius:999px;font-weight:600;font-size:.88rem;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .nav-btn:hover{background:var(--pink-tint-2);border-color:var(--pink-soft);}
+  .nav-btn.active{background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));color:#fff;border-color:transparent;}
+
+  main{max-width:1080px;margin:0 auto;padding:0 clamp(16px,4vw,40px) 80px;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    margin-top:26px;border-radius:28px;padding:clamp(30px,5vw,56px);
+    background:linear-gradient(120deg,var(--purple-deep) 0%,var(--purple-mid) 45%,var(--magenta) 100%);
+    color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow-glow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-60px;top:-60px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,0.18),transparent 70%);
+  }
+  .hero-eyebrow{
+    display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;
+    background:rgba(255,255,255,0.16);padding:6px 14px;border-radius:999px;margin-bottom:18px;
+  }
+  .hero h1{font-size:clamp(1.9rem,4vw,2.9rem);font-weight:600;margin:0 0 14px;max-width:16ch;line-height:1.12;}
+  .hero p{font-size:1.02rem;line-height:1.6;max-width:56ch;color:#F3E3F4;margin:0;}
+
+  /* ---------- TABS / INPUT ---------- */
+  .scanner-card{
+    background:#fff;border:1px solid var(--border-pink);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-soft);margin-top:-30px;position:relative;z-index:5;padding:clamp(18px,3vw,32px);
+  }
+  .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .tab-btn{
+    flex:1 1 160px;padding:12px 14px;border-radius:var(--radius-md);border:1.5px solid var(--border-pink);
+    background:var(--pink-tint);color:var(--ink-soft);font-weight:600;font-size:.88rem;
+    display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;
+  }
+  .tab-btn.active{background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));color:#fff;border-color:transparent;box-shadow:var(--shadow-soft);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .dropzone{
+    border:2px dashed var(--pink-soft);border-radius:var(--radius-md);background:var(--pink-tint);
+    padding:38px 20px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s;
+  }
+  .dropzone.drag{background:var(--pink-tint-2);border-color:var(--magenta-bright);}
+  .dropzone p{margin:6px 0 0;color:var(--ink-soft);font-size:.9rem;}
+  .dropzone .dz-icon{width:40px;height:40px;margin:0 auto;}
+  .dropzone small{color:var(--ink-soft);opacity:.75;}
+  .preview-img{max-height:180px;border-radius:12px;margin-top:14px;border:1px solid var(--border-pink);}
+
+  textarea, input[type=text], input[type=url]{
+    width:100%;border:1.5px solid var(--border-pink);border-radius:var(--radius-sm);
+    padding:13px 15px;font-family:'Inter',sans-serif;font-size:.94rem;color:var(--ink);
+    background:#fff;resize:vertical;transition:border-color .15s;
+  }
+  textarea:focus,input:focus{border-color:var(--magenta-bright);}
+  textarea{min-height:150px;}
+  label.field-label{display:block;font-weight:600;font-size:.86rem;margin:16px 0 7px;color:var(--purple-deep);}
+  .ocr-box{margin-top:14px;background:var(--pink-tint);border:1px solid var(--border-pink);border-radius:var(--radius-sm);padding:12px 14px;font-size:.86rem;max-height:160px;overflow:auto;white-space:pre-wrap;}
+  .ocr-label{font-weight:700;font-size:.78rem;color:var(--purple-deep);margin-bottom:6px;}
+
+  .analyze-btn{
+    width:100%;margin-top:22px;padding:15px;border:none;border-radius:999px;
+    background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));color:#fff;
+    font-weight:700;font-size:1rem;box-shadow:var(--shadow-glow);display:flex;align-items:center;justify-content:center;gap:10px;
+    transition:transform .1s;
+  }
+  .analyze-btn:active{transform:scale(.99);}
+  .analyze-btn:disabled{opacity:.75;cursor:progress;}
+  .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .error-msg{margin-top:12px;background:var(--risk-high-bg);color:var(--risk-high);border:1px solid #F2C3C6;padding:10px 14px;border-radius:var(--radius-sm);font-size:.86rem;}
+
+  /* ---------- SAMPLES ---------- */
+  .section-heading{font-size:1.4rem;font-weight:600;margin:48px 0 6px;}
+  .section-sub{color:var(--ink-soft);font-size:.92rem;margin:0 0 20px;}
+  .sample-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;}
+  .sample-card{
+    background:#fff;border:1px solid var(--border-pink);border-radius:var(--radius-md);padding:18px;
+    box-shadow:var(--shadow-soft);cursor:pointer;transition:transform .15s,box-shadow .15s;
+  }
+  .sample-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-glow);}
+  .sample-card h4{margin:0 0 8px;font-size:.98rem;font-weight:600;font-family:'Fraunces',serif;}
+  .sample-card p{margin:0;font-size:.82rem;color:var(--ink-soft);}
+  .risk-chip{display:inline-block;margin-top:10px;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:999px;}
+  .risk-chip.low{background:var(--risk-low-bg);color:var(--risk-low);}
+  .risk-chip.medium{background:var(--risk-med-bg);color:var(--risk-med);}
+  .risk-chip.high{background:var(--risk-high-bg);color:var(--risk-high);}
+
+  /* ---------- FEATURE CARDS ---------- */
+  .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;}
+  .feature-card{background:#fff;border:1px solid var(--border-pink);border-radius:var(--radius-md);padding:22px;box-shadow:var(--shadow-soft);}
+  .feature-card .ficon{width:34px;height:34px;margin-bottom:12px;color:var(--magenta);}
+  .feature-card h4{margin:0 0 8px;font-size:1rem;}
+  .feature-card p{margin:0;font-size:.86rem;color:var(--ink-soft);line-height:1.55;}
+
+  .disclaimer{
+    margin-top:44px;background:var(--pink-tint);border:1px solid var(--border-pink);border-radius:var(--radius-md);
+    padding:16px 20px;font-size:.82rem;color:var(--ink-soft);line-height:1.5;
+  }
+
+  /* ---------- RESULT PAGE ---------- */
+  .result-header{display:flex;flex-wrap:wrap;gap:26px;align-items:center;background:#fff;border:1px solid var(--border-pink);border-radius:var(--radius-lg);padding:28px;box-shadow:var(--shadow-soft);margin-top:24px;}
+  .score-ring{width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;}
+  .score-ring::before{content:"";position:absolute;inset:10px;border-radius:50%;background:#fff;}
+  .score-ring .score-inner{position:relative;text-align:center;}
+  .score-inner .num{font-family:'Fraunces',serif;font-size:2.1rem;font-weight:700;line-height:1;}
+  .score-inner .of100{font-size:.72rem;color:var(--ink-soft);}
+  .result-meta{flex:1;min-width:220px;}
+  .risk-level-badge{display:inline-block;font-weight:700;font-size:.82rem;padding:5px 14px;border-radius:999px;margin-bottom:10px;}
+  .risk-level-badge.low{background:var(--risk-low-bg);color:var(--risk-low);}
+  .risk-level-badge.medium{background:var(--risk-med-bg);color:var(--risk-med);}
+  .risk-level-badge.high{background:var(--risk-high-bg);color:var(--risk-high);}
+  .result-meta h2{margin:0 0 6px;font-size:1.5rem;}
+  .result-meta p{margin:0;color:var(--ink-soft);font-size:.9rem;}
+  .cat-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .cat-badge{font-size:.76rem;font-weight:600;padding:5px 12px;border-radius:999px;background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));color:#fff;}
+
+  .result-section{background:#fff;border:1px solid var(--border-pink);border-radius:var(--radius-lg);padding:26px;margin-top:20px;box-shadow:var(--shadow-soft);}
+  .result-section h3{margin:0 0 14px;font-size:1.12rem;}
+  .flag-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+  .flag-list li{display:flex;gap:10px;align-items:flex-start;font-size:.9rem;background:var(--risk-high-bg);border:1px solid #F2C3C6;padding:10px 14px;border-radius:var(--radius-sm);}
+  .flag-list.clean li{background:var(--risk-low-bg);border-color:#C9EBD6;}
+  .safety-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;}
+  .safety-list li{display:flex;gap:10px;align-items:flex-start;font-size:.9rem;}
+  .safety-list li::before{content:"✓";color:var(--risk-low);font-weight:700;}
+  .report-box{background:var(--pink-tint);border:1px solid var(--border-pink);border-radius:var(--radius-md);padding:18px 20px;font-size:.87rem;line-height:1.6;}
+  .report-box a{color:var(--purple-deep);font-weight:600;text-decoration:underline;}
+  .helpline-alert{
+    margin-top:20px;border-radius:var(--radius-lg);padding:22px clamp(18px,3vw,28px);
+    background:linear-gradient(120deg,#B0132E 0%, #E0299A 100%);color:#fff;
+    box-shadow:0 12px 30px rgba(176,19,46,0.35);position:relative;overflow:hidden;
+  }
+  .helpline-alert::before{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.18),transparent 70%);}
+  .helpline-alert .ha-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.02em;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:999px;margin-bottom:10px;}
+  .helpline-alert h3{margin:0 0 8px;font-size:1.15rem;color:#fff;}
+  .helpline-alert p{margin:0 0 16px;font-size:.88rem;color:#FCE0EC;max-width:60ch;line-height:1.55;}
+  .helpline-actions{display:flex;gap:12px;flex-wrap:wrap;position:relative;z-index:1;}
+  .helpline-btn{
+    display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:999px;
+    font-weight:700;font-size:.88rem;text-decoration:none;transition:transform .12s;
+  }
+  .helpline-btn:hover{transform:translateY(-1px);}
+  .helpline-btn.primary{background:#fff;color:#B0132E;}
+  .helpline-btn.secondary{background:rgba(255,255,255,0.16);color:#fff;border:1.5px solid rgba(255,255,255,0.55);}
+  .result-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;}
+  .btn-secondary{padding:11px 20px;border-radius:999px;border:1.5px solid var(--border-pink);background:#fff;color:var(--purple-deep);font-weight:600;font-size:.86rem;}
+  .btn-secondary:hover{background:var(--pink-tint-2);}
+
+  /* ---------- SCAM GUIDE ---------- */
+  .guide-card{background:#fff;border:1px solid var(--border-pink);border-radius:var(--radius-lg);padding:24px;margin-top:18px;box-shadow:var(--shadow-soft);}
+  .guide-card h3{margin:0 0 10px;font-size:1.15rem;}
+  .guide-card h5{margin:14px 0 6px;font-size:.82rem;color:var(--purple-deep);text-transform:none;}
+  .guide-card ul{margin:0;padding-left:20px;font-size:.88rem;color:var(--ink-soft);line-height:1.7;}
+
+  /* ---------- HISTORY ---------- */
+  .history-toolbar{display:flex;justify-content:space-between;align-items:center;margin:24px 0 16px;flex-wrap:wrap;gap:10px;}
+  .history-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+  .history-card{background:#fff;border:1px solid var(--border-pink);border-radius:var(--radius-md);padding:18px;box-shadow:var(--shadow-soft);}
+  .history-card h4{margin:0 0 6px;font-size:.95rem;}
+  .history-card .hc-meta{font-size:.76rem;color:var(--ink-soft);margin-bottom:8px;}
+  .history-card .hc-score{font-family:'Fraunces',serif;font-weight:700;font-size:1.5rem;}
+  .history-actions{display:flex;gap:8px;margin-top:12px;}
+  .link-btn{background:none;border:none;color:var(--purple-deep);font-weight:600;font-size:.8rem;padding:0;text-decoration:underline;}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--ink-soft);}
+  .empty-state svg{width:52px;height:52px;margin-bottom:14px;color:var(--pink-soft);}
+
+  /* ---------- CHAT ---------- */
+  #chat-fab{
+    position:fixed;bottom:22px;right:22px;z-index:70;
+    background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));color:#fff;border:none;
+    padding:14px 20px;border-radius:999px;font-weight:700;font-size:.88rem;box-shadow:var(--shadow-glow);
+    display:flex;align-items:center;gap:8px;
+  }
+  #chat-panel{
+    position:fixed;bottom:22px;right:22px;z-index:80;width:min(360px,90vw);height:min(520px,75vh);
+    background:#fff;border-radius:var(--radius-lg);box-shadow:0 20px 50px rgba(76,26,140,0.3);
+    display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-pink);
+  }
+  .chat-header{background:linear-gradient(90deg,var(--purple-deep),var(--magenta));color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;}
+  .chat-header .ch-title{font-family:'Fraunces',serif;font-weight:600;font-size:1.02rem;}
+  .chat-header .ch-sub{font-size:.72rem;color:#F0D6EE;}
+  .chat-close{background:rgba(255,255,255,0.2);border:none;color:#fff;width:26px;height:26px;border-radius:50%;font-size:.9rem;}
+  .chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--pink-tint);}
+  .msg{max-width:85%;padding:10px 13px;border-radius:14px;font-size:.85rem;line-height:1.5;}
+  .msg.bot{background:#fff;border:1px solid var(--border-pink);align-self:flex-start;border-bottom-left-radius:4px;}
+  .msg.user{background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+  .quick-actions{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;background:var(--pink-tint);}
+  .qa-btn{font-size:.74rem;border:1px solid var(--pink-soft);background:#fff;color:var(--purple-deep);padding:6px 11px;border-radius:999px;font-weight:600;}
+  .chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border-pink);background:#fff;}
+  .chat-input-row input{flex:1;border:1.5px solid var(--border-pink);border-radius:999px;padding:9px 14px;font-size:.85rem;}
+  .chat-send{background:linear-gradient(90deg,var(--purple-mid),var(--magenta-bright));color:#fff;border:none;width:38px;height:38px;border-radius:50%;flex-shrink:0;}
+
+  @media (max-width:640px){
+    nav.nav-links{width:100%;justify-content:flex-start;}
+    .hero{margin-top:16px;border-radius:20px;}
+    .scanner-card{margin-top:-20px;}
+    #chat-panel{right:12px;left:12px;width:auto;bottom:12px;}
+    #chat-fab{right:12px;bottom:12px;padding:12px 16px;}
+    .result-header{flex-direction:column;text-align:center;}
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" role="status" aria-live="polite">
+  <div class="splash-shield"><span class="emoji" aria-hidden="true">🛡️</span></div>
+  <h1>GatekeepeRShield</h1>
+  <p>An AI Anti-Scam Detector</p>
+</div>
+
+<div id="app" style="display:none;">
+
+  <!-- HEADER -->
+  <header class="top-nav">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true" style="font-size:30px;line-height:1;filter:drop-shadow(0 2px 6px rgba(124,47,199,0.35));">🛡️</span>
+      <div class="brand-text">
+        <span class="brand-name">GatekeepeRShield <span class="badge-pill">ANTI-SCAM</span></span>
+        <span class="brand-tag">An Anti-Scam Protector</span>
+      </div>
+    </div>
+    <nav class="nav-links" aria-label="Main navigation">
+      <button class="nav-btn" data-view="home" id="nav-home">Scanner</button>
+      <button class="nav-btn" data-view="guide" id="nav-guide">Scam Guide</button>
+      <button class="nav-btn" data-view="history" id="nav-history">History</button>
+    </nav>
+  </header>
+
+  <!-- HOME VIEW -->
+  <main id="view-home">
+    <section class="hero">
+      <span class="hero-eyebrow">⚡ High-Speed AI Multimodal OCR Engine</span>
+      <h1>Scan job vacancies &amp; detect AI scams</h1>
+      <p>Upload job offer screenshots, WhatsApp/Telegram messages, or emails. Our AI extracts OCR text and evaluates risk with interactive analysis.</p>
+    </section>
+
+    <div class="scanner-card">
+      <div class="tabs" role="tablist" aria-label="Input method">
+        <button class="tab-btn active" data-tab="image" role="tab" aria-selected="true">🖼️ Upload Screenshot</button>
+        <button class="tab-btn" data-tab="text" role="tab" aria-selected="false">✍️ Paste Text / Email</button>
+        <button class="tab-btn" data-tab="url" role="tab" aria-selected="false">🔗 Job URL / Link</button>
+      </div>
+
+      <div class="tab-panel active" id="panel-image">
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload screenshot or image, click or drag a file here">
+          <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="#C21C9E" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <p><strong>Drop screenshot or image file here, or browse</strong></p>
+          <small>Supports PNG, JPG, JPEG, WEBP</small>
+          <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="visually-hidden" aria-label="Choose image file"/>
+        </div>
+        <img id="preview-img" class="preview-img" style="display:none" alt="Preview of uploaded job screenshot"/>
+        <div id="ocr-status" style="display:none" class="ocr-box"><span class="ocr-label" id="ocr-status-label">Reading image…</span></div>
+        <div id="ocr-result" style="display:none">
+          <p class="ocr-label" style="margin-top:14px;">Text detected from image</p>
+          <div class="ocr-box" id="ocr-text"></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-text">
+        <label class="field-label" for="text-input">Job post, recruiter message, or email</label>
+        <textarea id="text-input" placeholder="Paste the job offer, recruiter message, or email here..."></textarea>
+      </div>
+
+      <div class="tab-panel" id="panel-url">
+        <label class="field-label" for="url-input">Job URL / Link</label>
+        <input type="url" id="url-input" placeholder="https://example.com/job-posting" />
+        <p style="font-size:.8rem;color:var(--ink-soft);margin-top:8px;">We evaluate the link text itself for common warning signs (shorteners, look-alike domains, unusual patterns). We can't independently verify whether a site is safe — always check the employer's official channels too.</p>
+      </div>
+
+      <label class="field-label" for="notes-input">Additional Notes or Recruiter Email <span style="font-weight:400;color:var(--ink-soft);">(optional)</span></label>
+      <input type="text" id="notes-input" placeholder="e.g. Sender emailed from recruiter@gmail.com asking to chat on Telegram" />
+
+      <button class="analyze-btn" id="analyze-btn">
+        <span id="analyze-btn-label">Run Gatekeeper Risk Scan</span>
+      </button>
+      <div id="error-box"></div>
+    </div>
+
+    <h2 class="section-heading">Try a sample</h2>
+    <p class="section-sub">See how GatekeepeRShield scores real-world patterns instantly.</p>
+    <div class="sample-grid" id="sample-grid"></div>
+
+    <h2 class="section-heading">What GatekeepeRShield does</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <svg class="ficon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6" stroke-linecap="round"/></svg>
+        <h4>OCR Screenshot Parsing</h4>
+        <p>Upload screenshots from Telegram, WhatsApp, LinkedIn, or your email inbox. Our AI extracts the text directly from the image.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="ficon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>
+        <h4>AI Scam Pattern Radar</h4>
+        <p>Evaluates fake cheque deposits, crypto task traps, look-alike email domains, and other suspicious recruitment patterns.</p>
+      </div>
+      <div class="feature-card">
+        <svg class="ficon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/></svg>
+        <h4>Actionable Safety Guidance</h4>
+        <p>Provides practical safety recommendations, company verification steps, and cybercrime reporting guidance.</p>
+      </div>
+    </div>
+
+    <div class="disclaimer">GatekeepeRShield provides an AI-based risk assessment and does not guarantee that a job offer is legitimate or fraudulent. Always independently verify the employer before sharing personal information or making payments. Do not upload passwords, OTPs, banking credentials, card details, or other highly sensitive information — your history is stored privately on this device.</div>
+  </main>
+
+  <!-- RESULT VIEW -->
+  <main id="view-result" style="display:none;"></main>
+
+  <!-- GUIDE VIEW -->
+  <main id="view-guide" style="display:none;">
+    <h2 class="section-heading" style="margin-top:32px;">Scam Guide</h2>
+    <p class="section-sub">Learn how the most common job-scam patterns work — and how to spot them yourself.</p>
+    <div id="guide-list"></div>
+  </main>
+
+  <!-- HISTORY VIEW -->
+  <main id="view-history" style="display:none;">
+    <div class="history-toolbar">
+      <div>
+        <h2 class="section-heading" style="margin:32px 0 4px;">History</h2>
+        <p class="section-sub" style="margin:0;">Your past scans, stored privately on this device.</p>
+      </div>
+      <button class="btn-secondary" id="clear-history-btn">Clear all history</button>
+    </div>
+    <div class="history-grid" id="history-grid"></div>
+  </main>
+
+  <!-- CHAT -->
+  <button id="chat-fab" aria-haspopup="dialog">💬 Ask GatekeepeRShield AI</button>
+  <div id="chat-panel" style="display:none;" role="dialog" aria-label="GatekeepeRShield AI assistant">
+    <div class="chat-header">
+      <div>
+        <div class="ch-title">GatekeepeRShield AI</div>
+        <div class="ch-sub">Your safe-job assistant</div>
+      </div>
+      <button class="chat-close" id="chat-close" aria-label="Close chat">✕</button>
+    </div>
+    <div class="chat-body" id="chat-body"></div>
+    <div class="quick-actions" id="quick-actions"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Type a question…" aria-label="Message GatekeepeRShield AI"/>
+      <button class="chat-send" id="chat-send" aria-label="Send message">➤</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     0. STORAGE LAYER
+     Priority: Claude's window.storage (if running inside claude.ai)
+     → browser localStorage (for standalone/deployed use, e.g. Vercel)
+     → in-memory fallback (private/locked-down browsers)
+     ============================================================ */
+  var memoryStore = {};
+  var hasPersistentStorage = typeof window.storage !== "undefined" && window.storage !== null;
+  var hasLocalStorage = (function(){
+    try{ var k="__gks_test__"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }
+    catch(e){ return false; }
+  })();
+  var LS_PREFIX = "gatekeepershield:";
+
+  async function storeSet(key, value){
+    try{
+      if(hasPersistentStorage){ await window.storage.set(key, JSON.stringify(value), false); return; }
+    }catch(e){}
+    try{
+      if(hasLocalStorage){ localStorage.setItem(LS_PREFIX+key, JSON.stringify(value)); return; }
+    }catch(e){}
+    memoryStore[key] = JSON.stringify(value);
+  }
+  async function storeGet(key){
+    try{
+      if(hasPersistentStorage){
+        var r = await window.storage.get(key, false);
+        return r ? JSON.parse(r.value) : null;
+      }
+    }catch(e){}
+    try{
+      if(hasLocalStorage){
+        var v = localStorage.getItem(LS_PREFIX+key);
+        return v ? JSON.parse(v) : null;
+      }
+    }catch(e){}
+    return memoryStore[key] ? JSON.parse(memoryStore[key]) : null;
+  }
+  async function storeDelete(key){
+    try{ if(hasPersistentStorage){ await window.storage.delete(key, false); } }catch(e){}
+    try{ if(hasLocalStorage){ localStorage.removeItem(LS_PREFIX+key); } }catch(e){}
+    delete memoryStore[key];
+  }
+  async function storeListKeys(prefix){
+    try{
+      if(hasPersistentStorage){
+        var r = await window.storage.list(prefix, false);
+        return r ? r.keys : [];
+      }
+    }catch(e){}
+    try{
+      if(hasLocalStorage){
+        var keys = [];
+        for(var i=0;i<localStorage.length;i++){
+          var k = localStorage.key(i);
+          if(k && k.indexOf(LS_PREFIX+prefix)===0){ keys.push(k.slice(LS_PREFIX.length)); }
+        }
+        return keys;
+      }
+    }catch(e){}
+    return Object.keys(memoryStore).filter(function(k){ return k.indexOf(prefix)===0; });
+  }
+
+  /* ============================================================
+     1. SCAM ANALYSIS ENGINE
+     ============================================================ */
+  var INDICATOR_RULES = [
+    { id:"upfront_fee", weight:32, category:"Recruitment Fee Scam",
+      patterns:[/registration fee/i,/processing fee/i,/security deposit/i,/refundable deposit/i,/training fee/i,/joining fee/i,/pay(?:ment)? (?:of|before|to)\s*(?:rs\.?|inr|\$|₹)/i,/deposit (?:amount|money)/i,/kit fee/i,/onboarding fee/i,/pay .{0,15}(join|start|begin)/i,/refundable (?:amount|charge)/i,/one[- ]time (?:fee|payment|charge)/i,/activation (?:fee|charge)/i],
+      label:"Requests an upfront fee, deposit, or payment before hiring" },
+    { id:"salary_too_good", weight:18, category:"Fake Job Scam",
+      patterns:[/earn (?:up to )?(?:rs\.?|inr|\$|₹)?\s?\d{3,}\s?(?:\/|per)?\s?(day|hour|week)/i,/no experience.{0,20}high (?:pay|salary|income)/i,/guaranteed income/i,/easy money/i,/work\s?2\s?hours.{0,20}earn/i,/double your income/i,/unlimited earning/i,/daily (?:payment|payout)/i,/weekly (?:payment|payout)/i],
+      label:"Promises unusually high or guaranteed earnings for minimal work" },
+    { id:"urgency", weight:12, category:"Fake Job Scam",
+      patterns:[/urgent(?:ly)? hiring/i,/immediate joining/i,/limited seats/i,/hurry/i,/offer expires (today|soon)/i,/act now/i,/only \d+ (spots|seats|positions) left/i,/apply (?:immediately|now|today)/i],
+      label:"Uses high-pressure urgency language to rush a decision" },
+    { id:"chat_app_pivot", weight:16, category:"Telegram/WhatsApp Scam",
+      patterns:[/telegram/i,/whatsapp/i,/chat (?:on|via) (telegram|whatsapp)/i,/contact (?:us|me) on (telegram|whatsapp)/i],
+      label:"Directs communication to Telegram or WhatsApp instead of an official channel" },
+    { id:"sensitive_request", weight:34, category:"Phishing",
+      patterns:[/\botp\b/i,/\bpassword\b/i,/\bcvv\b/i,/\bpin\s?(code|number)?\b/i,/bank account/i,/ifsc/i,/card number/i,/aadhaar|aadhar/i,/passport number/i,/\bssn\b/i,/social security number/i,/net ?banking (?:login|credentials)/i],
+      label:"Asks for OTP, password, banking details, or ID/document numbers" },
+    { id:"suspicious_email", weight:10, category:"Company Impersonation",
+      patterns:[/@gmail\.com/i,/@yahoo\.com/i,/@outlook\.com/i,/@hotmail\.com/i],
+      label:"Recruiter uses a free personal email address instead of an official company domain",
+      requiresContext:"companyClaim" },
+    { id:"url_shortener", weight:14, category:"Phishing",
+      patterns:[/bit\.ly/i,/tinyurl/i,/rebrand\.ly/i,/is\.gd/i,/t\.co\//i,/goo\.gl/i,/cutt\.ly/i,/shorturl/i],
+      label:"Link uses a URL shortener, which hides the real destination" },
+    { id:"ip_url", weight:13, category:"Phishing",
+      patterns:[/https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/i],
+      label:"Link points to a raw IP address instead of a normal company domain" },
+    { id:"lookalike_domain", weight:12, category:"Company Impersonation",
+      patterns:[/-careers\d*\.(?:xyz|top|info|online|site)/i,/(?:jobs|careers|hr)-?(?:portal|verify|apply)\.(?:xyz|top|club|online)/i,/\.(?:xyz|top|club|zip|country)\//i],
+      label:"Link uses an unusual domain ending often associated with throwaway or fraudulent sites" },
+    { id:"crypto_payment", weight:16, category:"Cryptocurrency Scam",
+      patterns:[/\busdt\b/i,/bitcoin/i,/\bcrypto\b/i,/\bbtc\b/i,/binance/i,/western union/i,/moneygram/i,/gift card/i,/wallet address/i],
+      label:"Involves cryptocurrency, gift cards, or wire-transfer payment methods" },
+    { id:"fake_interview", weight:10, category:"Fake Interview / Offer Scam",
+      patterns:[/selected without (?:an? )?interview/i,/no interview (?:is )?required/i,/instant offer letter/i,/directly (?:selected|hired)/i,/interview.{0,15}chat(?:ting)? based/i],
+      label:"Offers selection or an offer letter without any real interview process" },
+    { id:"wfh_task_scam", weight:14, category:"Work-from-Home Scam",
+      patterns:[/data entry job/i,/optimi[sz]e (?:app|product|task)s?/i,/task.{0,15}(?:complete|rating).{0,15}(?:earn|commission)/i,/like and share.{0,15}earn/i,/prepaid task/i,/recharge.{0,15}(?:task|earn)/i,/part[- ]?time job/i,/work from home/i],
+      label:"Matches common work-from-home 'task/rating' scam patterns" },
+    { id:"vague_generic", weight:8, category:"Fake Job Scam",
+      patterns:null, custom:"generic_short",
+      label:"Job description is very short, generic, and gives no verifiable company details" },
+    { id:"poor_language", weight:6, category:"Fake Job Scam",
+      patterns:null, custom:"poor_language",
+      label:"Text shows unusual formatting, excessive punctuation, or spam-like patterns" }
+  ];
+
+  var SCAM_CATEGORY_ORDER = ["Recruitment Fee Scam","Phishing","Identity Theft Risk","Cryptocurrency Scam","Telegram/WhatsApp Scam","Work-from-Home Scam","Company Impersonation","Fake Interview / Offer Scam","Payment Scam","Fake Job Scam"];
+
+  function detectCompanyClaim(text){
+    return /(?:pvt\.?\s?ltd|private limited|inc\.?|corporation|company|technologies|solutions|enterprises|multinational|mnc)/i.test(text);
+  }
+
+  function analyzeContent(rawText, url, notes){
+    var text = [rawText||"", notes||""].join("\n");
+    var fullTextForCompanyCheck = text;
+    var flags = [];
+    var categoriesHit = {};
+    var score = 0;
+    var wordCount = (rawText||"").trim().split(/\s+/).filter(Boolean).length;
+
+    INDICATOR_RULES.forEach(function(rule){
+      var hit = false;
+      if(rule.custom === "generic_short"){
+        hit = wordCount > 0 && wordCount < 40 && /(hiring|job|vacancy|opportunity|position|work from home)/i.test(text) && !/(?:https?:\/\/)?www\.[a-z0-9-]+\.[a-z]{2,}/i.test(text);
+      } else if(rule.custom === "poor_language"){
+        var exclaims = (text.match(/!/g)||[]).length;
+        var allCapsWords = (text.match(/\b[A-Z]{4,}\b/g)||[]).length;
+        hit = exclaims >= 4 || allCapsWords >= 3;
+      } else if(rule.patterns){
+        hit = rule.patterns.some(function(p){ return p.test(text); });
+        if(hit && rule.requiresContext === "companyClaim"){
+          hit = detectCompanyClaim(fullTextForCompanyCheck);
+        }
+      }
+      if(hit){
+        flags.push({ id:rule.id, label:rule.label, weight:rule.weight });
+        categoriesHit[rule.category] = (categoriesHit[rule.category]||0) + rule.weight;
+        score += rule.weight;
+      }
+    });
+
+    // URL-specific note (not itself a scored flag, but informative)
+    var urlNote = null;
+    if(url && url.trim()){
+      urlNote = "We can't independently verify whether \"" + url.trim() + "\" is a safe or malicious website. This assessment is based only on patterns in the link text and the job content you provided.";
+    }
+
+    // combo bonus: real scams rarely show just one isolated signal — multiple
+    // co-occurring red flags compound the danger rather than adding linearly
+    if(flags.length >= 5) score += 22;
+    else if(flags.length >= 4) score += 16;
+    else if(flags.length >= 3) score += 10;
+    else if(flags.length >= 2) score += 4;
+
+    // small deterministic variance based on content length so identical-category posts don't cluster on round numbers
+    if(flags.length > 0){
+      var lengthAdj = Math.min(4, Math.floor((rawText||"").length / 400));
+      score += lengthAdj;
+    }
+    if(score > 100) score = 100;
+    if(score < 0) score = 0;
+
+    var level = score <= 30 ? "low" : (score <= 60 ? "medium" : "high");
+
+    var categories = Object.keys(categoriesHit).sort(function(a,b){
+      return SCAM_CATEGORY_ORDER.indexOf(a) - SCAM_CATEGORY_ORDER.indexOf(b);
+    });
+    if(categories.length === 0 && score > 0) categories = ["Fake Job Scam"];
+
+    // job title / company best-effort extraction
+    var titleMatch = (rawText||"").match(/(?:job title|position|role)\s*[:\-]\s*([^\n]{3,60})/i);
+    var companyMatch = (rawText||"").match(/(?:company|organi[sz]ation|employer)\s*[:\-]\s*([^\n]{2,50})/i);
+    var firstLine = (rawText||"").split("\n").map(function(l){return l.trim();}).filter(Boolean)[0] || "";
+    var jobTitle = titleMatch ? titleMatch[1].trim() : (firstLine.length>0 && firstLine.length<70 ? firstLine : null);
+    var company = companyMatch ? companyMatch[1].trim() : null;
+
+    var explanation = buildExplanation(level, flags);
+
+    return {
+      score: score, level: level, flags: flags, categories: categories,
+      explanation: explanation, urlNote: urlNote,
+      jobTitle: jobTitle, company: company,
+      wordCount: wordCount
+    };
+  }
+
+  function buildExplanation(level, flags){
+    if(flags.length === 0){
+      return "This content does not show strong scam indicators based on our checks. That said, no automated tool can fully confirm a job offer is genuine — independently verify the employer before sharing personal information.";
+    }
+    var top = flags.slice().sort(function(a,b){return b.weight-a.weight;}).slice(0,3).map(function(f){return f.label.charAt(0).toLowerCase()+f.label.slice(1);});
+    var joined = top.length===1 ? top[0] : (top.slice(0,-1).join(", ") + " and " + top[top.length-1]);
+    if(level === "high"){
+      return "This job offer contains several strong scam indicators and should be treated with extreme caution — most notably, it " + joined + ".";
+    } else if(level === "medium"){
+      return "This job offer shows some warning signs worth taking seriously, including that it " + joined + ". Proceed carefully and verify independently.";
+    }
+    return "This job offer shows a mild warning sign — it " + joined + " — but overall risk appears low. Still, verify the employer independently.";
+  }
+
+  /* ============================================================
+     2. SAMPLE DEMOS
+     ============================================================ */
+  var SAMPLES = [
+    {
+      title:"Telegram High-Pay Data Entry Check Scam",
+      text:"URGENT HIRING!!! Data Entry Job — Work From Home\nEarn Rs 3000 per day, no experience needed!! Immediate joining. Selected without interview. To confirm your slot, pay a refundable registration fee of Rs 500 and continue the process on Telegram: @jobs_quickhire. Limited seats only, hurry!",
+      notes:"Sender emailed from hr.quickhire2026@gmail.com asking to chat on Telegram"
+    },
+    {
+      title:"Crypto App Optimization Task Fraud",
+      text:"Part Time Job Opportunity\nOptimize product ratings on our shopping app and earn commission for every task completed. Withdraw earnings in USDT. Initial task set requires a small deposit to unlock higher-paying tasks. Join our WhatsApp group for task links: bit.ly/task-job-2026",
+      notes:""
+    },
+    {
+      title:"Verified Software Engineer Posting",
+      text:"Job Title: Backend Software Engineer\nCompany: Meridian Cloud Systems Pvt. Ltd.\nWe are hiring a Backend Engineer with 2+ years of experience in Node.js and PostgreSQL. Salary: Rs 9,00,000 - 13,00,000 per annum, based on experience. Please apply via our careers page at www.meridiancloud.example/careers and our HR team will contact you from an @meridiancloud.example address to schedule a formal interview.",
+      notes:""
+    }
+  ];
+
+  /* ============================================================
+     3. SCAM GUIDE CONTENT
+     ============================================================ */
+  var GUIDE = [
+    { title:"Fake Job Scams", what:"Postings for jobs that don't really exist, created to collect personal data or money from applicants.",
+      signs:["Vague job description with no real duties","No verifiable company website or address","Salary far above market rate for the role"],
+      actions:["Search the company name plus \"scam\" or \"reviews\"","Verify the posting exists on the company's own careers page","Never pay to apply for a job"] },
+    { title:"Recruitment Fee Scams", what:"Scammers pose as recruiters and ask candidates to pay a fee for registration, training, or a guaranteed placement.",
+      signs:["Any request for payment before you've been hired","\"Refundable\" deposits that are never returned","Fees tied to urgency or limited-time offers"],
+      actions:["Legitimate employers never charge candidates to be hired","Refuse any upfront payment request","Report the recruiter's contact details to the platform"] },
+    { title:"Work-from-Home Scams", what:"Offers of easy remote \"tasks\" (data entry, app ratings, product optimization) that pay per task but require an upfront deposit to unlock earnings.",
+      signs:["Payment required to access higher-paying tasks","Vague task descriptions like \"optimize\" or \"rate\"","Earnings only withdrawable after paying more"],
+      actions:["Treat any pay-to-work scheme as a red flag","Avoid apps or portals that are not independently reviewed","Never deposit money to \"unlock\" wages you've supposedly earned"] },
+    { title:"Telegram/WhatsApp Scams", what:"Recruitment that quickly moves off official platforms and onto Telegram or WhatsApp, where there's no accountability or moderation.",
+      signs:["Request to continue the process on a personal chat app","Unofficial group links for \"onboarding\"","No official company email involved at any stage"],
+      actions:["Be wary whenever a recruiter insists on chat-app-only contact","Ask for an official company email and call the main office line","Avoid sharing documents in unmoderated group chats"] },
+    { title:"Phishing Links", what:"Fake login pages or forms designed to steal your credentials, disguised as job portals or offer letters.",
+      signs:["Shortened or unusual links (bit.ly, IP addresses)","Login pages that ask for banking details or OTP","URLs that closely resemble but don't exactly match a real company domain"],
+      actions:["Hover over links before clicking; check the real domain","Never enter your password or OTP after clicking a job link","Type the company's official URL manually instead of clicking"] },
+    { title:"Company Impersonation", what:"Scammers use a real, well-known company's name and branding while contacting you from unofficial channels.",
+      signs:["Recruiter email is a free address (Gmail, Yahoo) rather than the company's domain","Logos or letterheads that look slightly off","No listing of the role on the company's real careers page"],
+      actions:["Contact the company directly using contact details from its official website","Ask HR to confirm the recruiter's identity","Cross-check the job listing on the company's own site"] },
+    { title:"Fake Salary Promises", what:"Postings that promise unusually high pay for minimal effort or no experience, designed to lure applicants.",
+      signs:["Guaranteed daily/weekly income far above market norms","\"No experience needed\" paired with a high salary","Pressure to act fast before the \"offer\" disappears"],
+      actions:["Compare the offer against typical salaries for the role","Be skeptical of any guaranteed income claim","Slow down — legitimate offers don't expire in hours"] },
+    { title:"Identity/Document Theft", what:"Requests for sensitive documents (ID numbers, bank details) early in the process, often under the guise of \"verification\" or \"onboarding.\"",
+      signs:["Requests for Aadhaar, passport, or SSN before any formal offer","Requests for bank account or card details to \"process salary\"","Requests for OTP or passwords at any point"],
+      actions:["Never share ID numbers or banking details before a verified formal offer","Legitimate onboarding happens after signing an official contract","Report any OTP/password request immediately"] }
+  ];
+
+  /* ============================================================
+     4. DOM HELPERS & STATE
+     ============================================================ */
+  var state = { currentAnalysis:null, currentInputType:null, ocrText:"" };
+
+  function $(sel){ return document.querySelector(sel); }
+  function $all(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+  function escapeHtml(str){
+    return (str||"").replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  /* ============================================================
+     5. SPLASH → APP
+     ============================================================ */
+  window.addEventListener("load", function(){
+    setTimeout(function(){
+      var splash = $("#splash");
+      splash.classList.add("hide");
+      $("#app").style.display = "block";
+    }, 2600);
+  });
+
+  /* ============================================================
+     6. NAVIGATION
+     ============================================================ */
+  function showView(view){
+    ["home","result","guide","history"].forEach(function(v){
+      $("#view-"+v).style.display = (v===view) ? "block" : "none";
+    });
+    $all(".nav-btn").forEach(function(b){ b.classList.toggle("active", b.dataset.view===view); });
+    window.scrollTo({top:0, behavior:"smooth"});
+    if(view==="guide") renderGuide();
+    if(view==="history") renderHistory();
+  }
+  $("#nav-home").addEventListener("click", function(){ showView("home"); });
+  $("#nav-guide").addEventListener("click", function(){ showView("guide"); });
+  $("#nav-history").addEventListener("click", function(){ showView("history"); });
+
+  /* ============================================================
+     7. TABS
+     ============================================================ */
+  $all(".tab-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      $all(".tab-btn").forEach(function(b){ b.classList.remove("active"); b.setAttribute("aria-selected","false"); });
+      btn.classList.add("active"); btn.setAttribute("aria-selected","true");
+      ["image","text","url"].forEach(function(t){
+        $("#panel-"+t).classList.toggle("active", t===btn.dataset.tab);
+      });
+    });
+  });
+
+  /* ============================================================
+     8. IMAGE UPLOAD + OCR
+     ============================================================ */
+  var dropzone = $("#dropzone"), fileInput = $("#file-input");
+  dropzone.addEventListener("click", function(){ fileInput.click(); });
+  dropzone.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); fileInput.click(); } });
+  ["dragenter","dragover"].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.add("drag"); });
+  });
+  ["dragleave","drop"].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.remove("drag"); });
+  });
+  dropzone.addEventListener("drop", function(e){
+    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) handleImageFile(f);
+  });
+  fileInput.addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    if(f) handleImageFile(f);
+  });
+
+  function handleImageFile(file){
+    var validTypes = ["image/png","image/jpeg","image/webp"];
+    clearError();
+    if(validTypes.indexOf(file.type) === -1){
+      showError("Unsupported image format. Please upload a PNG, JPG, JPEG, or WEBP file.");
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = $("#preview-img");
+      img.src = e.target.result;
+      img.style.display = "block";
+      runOCR(e.target.result);
+    };
+    reader.onerror = function(){ showError("We couldn't read this image file. Please try another file."); };
+    reader.readAsDataURL(file);
+  }
+
+  async function runOCR(dataUrl){
+    var statusBox = $("#ocr-status"), statusLabel = $("#ocr-status-label"), resultBox = $("#ocr-result"), textBox = $("#ocr-text");
+    resultBox.style.display = "none";
+    statusBox.style.display = "block";
+    statusLabel.textContent = "Reading image…";
+    state.ocrText = "";
+    try{
+      if(typeof Tesseract === "undefined"){
+        throw new Error("ocr-engine-unavailable");
+      }
+      var result = await Tesseract.recognize(dataUrl, "eng", {
+        logger: function(m){
+          if(m.status === "recognizing text"){
+            statusLabel.textContent = "Reading image… " + Math.round((m.progress||0)*100) + "%";
+          }
+        }
+      });
+      var text = (result && result.data && result.data.text) ? result.data.text.trim() : "";
+      statusBox.style.display = "none";
+      if(text.length < 8){
+        showError("I couldn't clearly read all the text from this image. Please upload a clearer screenshot or paste the text manually.");
+        return;
+      }
+      state.ocrText = text;
+      resultBox.style.display = "block";
+      textBox.textContent = text;
+    }catch(err){
+      statusBox.style.display = "none";
+      showError("I couldn't clearly read all the text from this image. Please upload a clearer screenshot or paste the text manually.");
+    }
+  }
+
+  /* ============================================================
+     9. ERROR HANDLING
+     ============================================================ */
+  function showError(msg){
+    $("#error-box").innerHTML = '<div class="error-msg">⚠️ ' + escapeHtml(msg) + '</div>';
+  }
+  function clearError(){ $("#error-box").innerHTML = ""; }
+
+  /* ============================================================
+     10. RUN ANALYSIS
+     ============================================================ */
+  $("#analyze-btn").addEventListener("click", function(){ runAnalysis(); });
+
+  function getActiveTab(){
+    var active = $all(".tab-btn").find ? $all(".tab-btn").filter(function(b){return b.classList.contains("active");})[0] : null;
+    return active ? active.dataset.tab : "text";
+  }
+
+  async function runAnalysis(){
+    clearError();
+    var tab = getActiveTab();
+    var notes = $("#notes-input").value.trim();
+    var rawText = "", url = "", inputType = "";
+
+    if(tab === "image"){
+      rawText = state.ocrText || "";
+      inputType = "Image / Screenshot";
+      if(!rawText){
+        showError("Please upload a screenshot and wait for text extraction to finish before running the scan.");
+        return;
+      }
+    } else if(tab === "text"){
+      rawText = $("#text-input").value.trim();
+      inputType = "Pasted Text / Email";
+      if(rawText.length < 5){
+        showError("Please paste the job post, email, or message you'd like analyzed.");
+        return;
+      }
+    } else if(tab === "url"){
+      url = $("#url-input").value.trim();
+      inputType = "Job URL / Link";
+      if(!url){
+        showError("Please enter a job URL or link to analyze.");
+        return;
+      }
+      try{ new URL(url); }catch(e){
+        showError("That doesn't look like a valid URL. Please check the link and try again.");
+        return;
+      }
+      rawText = url;
+    }
+
+    var btn = $("#analyze-btn"), label = $("#analyze-btn-label");
+    btn.disabled = true;
+    label.innerHTML = '<span class="spinner"></span> Analyzing…';
+
+    await new Promise(function(res){ setTimeout(res, 700); }); // brief perceived-processing delay, non-blocking
+
+    try{
+      var analysis = analyzeContent(tab==="url" ? "" : rawText, tab==="url" ? url : "", notes);
+      state.currentAnalysis = analysis;
+      state.currentInputType = inputType;
+      renderResult(analysis, inputType);
+      await saveToHistory(analysis, inputType);
+      showView("result");
+    }catch(err){
+      showError("Something went wrong while analyzing this content. Please try again.");
+    }finally{
+      btn.disabled = false;
+      label.textContent = "Run Gatekeeper Risk Scan";
+    }
+  }
+
+  /* ============================================================
+     11. RESULT RENDER
+     ============================================================ */
+  var RISK_COLORS = { low:"#1B8A4B", medium:"#B96A08", high:"#C82F3A" };
+  var RISK_LABELS = { low:"LOW RISK", medium:"MEDIUM RISK", high:"HIGH RISK" };
+
+  function renderResult(analysis, inputType){
+    var color = RISK_COLORS[analysis.level];
+    var pct = analysis.score;
+    var ringStyle = "background:conic-gradient(" + color + " " + (pct*3.6) + "deg, #F1E4EE 0deg); ";
+
+    var flagsHtml = analysis.flags.length ? analysis.flags.map(function(f){
+      return '<li>🚩 ' + escapeHtml(f.label) + '</li>';
+    }).join("") : '<li>✅ No significant scam indicators were detected in the submitted content.</li>';
+
+    var catHtml = analysis.categories.map(function(c){ return '<span class="cat-badge">'+escapeHtml(c)+'</span>'; }).join("");
+
+    var safetyItems = getSafetyRecommendations(analysis.level, analysis.flags);
+    var safetyHtml = safetyItems.map(function(s){ return "<li>"+escapeHtml(s)+"</li>"; }).join("");
+
+    var urlNoteHtml = analysis.urlNote ? '<div class="result-section"><h3>About this link</h3><p style="font-size:.88rem;color:var(--ink-soft);margin:0;">'+escapeHtml(analysis.urlNote)+'</p></div>' : "";
+
+    var urgentHelplineHtml = analysis.score > 80 ? (
+      '<div class="helpline-alert">'
+      + '<span class="ha-eyebrow">⚠ Very High Risk Detected</span>'
+      + '<h3>This looks like an active scam — you can report it right now</h3>'
+      + '<p>This score crosses our highest risk threshold. If you have already engaged with this recruiter, stop all payments and do not share any more information. Report it directly using the options below.</p>'
+      + '<div class="helpline-actions">'
+      +   '<a class="helpline-btn primary" href="tel:1930">📞 Call Cyber Crime Helpline 1930</a>'
+      +   '<a class="helpline-btn secondary" href="https://cybercrime.gov.in" target="_blank" rel="noopener">🌐 File a Complaint at cybercrime.gov.in</a>'
+      + '</div>'
+      + '</div>'
+    ) : "";
+
+    var reportHtml = analysis.level === "high" ? (
+      '<div class="result-section"><h3>Report this scam</h3><div class="report-box">' +
+      'If you believe you have encountered a job fraud attempt in India, you can report it to the National Cyber Crime Reporting Portal at ' +
+      '<a href="https://cybercrime.gov.in" target="_blank" rel="noopener">cybercrime.gov.in</a> or call the cybercrime helpline at <strong>1930</strong>. ' +
+      'Keep screenshots, emails, and payment records as evidence. GatekeepeRShield does not submit reports on your behalf.' +
+      '</div></div>'
+    ) : "";
+
+    var html = ''
+      + '<div class="result-header">'
+      +   '<div class="score-ring" style="'+ringStyle+'"><div class="score-inner"><div class="num" style="color:'+color+'">'+pct+'</div><div class="of100">/ 100</div></div></div>'
+      +   '<div class="result-meta">'
+      +     '<span class="risk-level-badge '+analysis.level+'">'+RISK_LABELS[analysis.level]+'</span>'
+      +     '<h2>Risk Score: '+pct+' / 100</h2>'
+      +     '<p>Based on your '+escapeHtml(inputType.toLowerCase())+'.'+(analysis.jobTitle ? ' Detected role: <strong>'+escapeHtml(analysis.jobTitle)+'</strong>.' : '')+'</p>'
+      +     '<div class="cat-badges">'+(catHtml || '<span class="cat-badge" style="background:#EDEDED;color:#666;">No scam category detected</span>')+'</div>'
+      +   '</div>'
+      + '</div>'
+      + urgentHelplineHtml
+      + '<div class="result-section"><h3>Why was this score given?</h3><ul class="flag-list '+(analysis.flags.length?'':'clean')+'">'+flagsHtml+'</ul></div>'
+      + '<div class="result-section"><h3>AI Explanation</h3><p style="font-size:.92rem;line-height:1.6;margin:0;">'+escapeHtml(analysis.explanation)+'</p></div>'
+      + urlNoteHtml
+      + '<div class="result-section"><h3>What should you do?</h3><ul class="safety-list">'+safetyHtml+'</ul></div>'
+      + reportHtml
+      + '<div class="result-actions">'
+      +   '<button class="btn-secondary" id="back-to-scan-btn">← Run another scan</button>'
+      +   '<button class="btn-secondary" id="view-history-from-result">View history</button>'
+      + '</div>';
+
+    $("#view-result").innerHTML = html;
+    $("#back-to-scan-btn").addEventListener("click", function(){ showView("home"); });
+    $("#view-history-from-result").addEventListener("click", function(){ showView("history"); });
+  }
+
+  function getSafetyRecommendations(level, flags){
+    var flagIds = flags.map(function(f){return f.id;});
+    var recs = [];
+    if(level === "low"){
+      recs.push("This post does not show strong scam indicators, but independently verify the employer before sharing sensitive information.");
+      recs.push("Confirm the role exists on the company's own official careers page.");
+      return recs;
+    }
+    if(flagIds.indexOf("upfront_fee")!==-1) recs.push("Do not pay registration, training, or deposit fees to be hired.");
+    if(flagIds.indexOf("sensitive_request")!==-1) recs.push("Do not share OTPs, passwords, PINs, or banking/ID details with a recruiter.");
+    if(flagIds.indexOf("chat_app_pivot")!==-1) recs.push("Be cautious of recruitment that moves entirely to Telegram or WhatsApp with no official channel.");
+    if(flagIds.indexOf("crypto_payment")!==-1) recs.push("Do not send cryptocurrency, gift cards, or wire transfers as part of a job process.");
+    if(flagIds.indexOf("url_shortener")!==-1 || flagIds.indexOf("ip_url")!==-1 || flagIds.indexOf("lookalike_domain")!==-1) recs.push("Do not click the shared link — verify the employer through its official, independently-searched website instead.");
+    if(flagIds.indexOf("suspicious_email")!==-1) recs.push("Contact the company through an official, independently verified email address or phone number — not the one provided by the sender.");
+    recs.push("Verify the employer's identity through independently sourced contact details before proceeding.");
+    recs.push("Report suspicious recruitment activity to the platform where you found it.");
+    // de-duplicate & cap
+    return recs.filter(function(v,i,a){return a.indexOf(v)===i;}).slice(0,6);
+  }
+
+  /* ============================================================
+     12. SAMPLES
+     ============================================================ */
+  function renderSamples(){
+    var html = SAMPLES.map(function(s, i){
+      var preview = analyzeContent(s.text, "", s.notes);
+      return '<div class="sample-card" data-idx="'+i+'">'
+        + '<h4>'+escapeHtml(s.title)+'</h4>'
+        + '<p>'+escapeHtml(s.text.slice(0,90))+'…</p>'
+        + '<span class="risk-chip '+preview.level+'">'+RISK_LABELS[preview.level]+' · '+preview.score+'/100</span>'
+        + '</div>';
+    }).join("");
+    $("#sample-grid").innerHTML = html;
+    $all(".sample-card").forEach(function(card){
+      card.addEventListener("click", function(){
+        var s = SAMPLES[card.dataset.idx];
+        $all(".tab-btn").forEach(function(b){ b.classList.remove("active"); b.setAttribute("aria-selected","false"); });
+        $('.tab-btn[data-tab="text"]').classList.add("active");
+        $('.tab-btn[data-tab="text"]').setAttribute("aria-selected","true");
+        ["image","text","url"].forEach(function(t){ $("#panel-"+t).classList.toggle("active", t==="text"); });
+        $("#text-input").value = s.text;
+        $("#notes-input").value = s.notes;
+        window.scrollTo({top: $(".scanner-card").offsetTop - 20, behavior:"smooth"});
+      });
+    });
+  }
+
+  /* ============================================================
+     13. SCAM GUIDE RENDER
+     ============================================================ */
+  function renderGuide(){
+    var html = GUIDE.map(function(g){
+      return '<div class="guide-card">'
+        + '<h3>'+escapeHtml(g.title)+'</h3>'
+        + '<p style="margin:0 0 8px;font-size:.9rem;color:var(--ink-soft);">'+escapeHtml(g.what)+'</p>'
+        + '<h5>Common warning signs</h5><ul>'+g.signs.map(function(x){return '<li>'+escapeHtml(x)+'</li>';}).join("")+'</ul>'
+        + '<h5>What to do</h5><ul>'+g.actions.map(function(x){return '<li>'+escapeHtml(x)+'</li>';}).join("")+'</ul>'
+        + '</div>';
+    }).join("");
+    $("#guide-list").innerHTML = html;
+  }
+
+  /* ============================================================
+     14. HISTORY
+     ============================================================ */
+  async function saveToHistory(analysis, inputType){
+    var id = "hist_" + Date.now();
+    var now = new Date();
+    var record = {
+      id:id,
+      date: now.toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"}),
+      time: now.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}),
+      timestamp: now.getTime(),
+      jobTitle: analysis.jobTitle || "Not detected",
+      company: analysis.company || "Not detected",
+      inputType: inputType,
+      score: analysis.score,
+      level: analysis.level,
+      categories: analysis.categories,
+      flags: analysis.flags,
+      explanation: analysis.explanation,
+      urlNote: analysis.urlNote
+    };
+    await storeSet("history:"+id, record);
+  }
+
+  async function loadHistory(){
+    var keys = await storeListKeys("history:");
+    var records = [];
+    for(var i=0;i<keys.length;i++){
+      var r = await storeGet(keys[i]);
+      if(r) records.push(r);
+    }
+    records.sort(function(a,b){ return b.timestamp - a.timestamp; });
+    return records;
+  }
+
+  async function renderHistory(){
+    var grid = $("#history-grid");
+    grid.innerHTML = '<p style="color:var(--ink-soft);font-size:.88rem;">Loading…</p>';
+    var records = await loadHistory();
+    if(records.length === 0){
+      grid.innerHTML = '';
+      $("#view-history").querySelector(".history-grid").outerHTML =
+        '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/></svg>'
+        + '<p>No scans yet. Run your first Gatekeeper Risk Scan to see it here.</p></div>';
+      return;
+    }
+    grid.innerHTML = records.map(function(r){
+      return '<div class="history-card" data-id="'+r.id+'">'
+        + '<div class="hc-score" style="color:'+RISK_COLORS[r.level]+'">'+r.score+'/100</div>'
+        + '<span class="risk-chip '+r.level+'">'+RISK_LABELS[r.level]+'</span>'
+        + '<h4 style="margin-top:10px;">'+escapeHtml(r.jobTitle)+'</h4>'
+        + '<div class="hc-meta">'+escapeHtml(r.company)+' · '+escapeHtml(r.inputType)+'<br/>'+escapeHtml(r.date)+', '+escapeHtml(r.time)+'</div>'
+        + '<div class="hc-meta">'+escapeHtml((r.categories||[]).join(", ") || "No category")+'</div>'
+        + '<div class="history-actions">'
+        +   '<button class="link-btn" data-action="view" data-id="'+r.id+'">View full result</button>'
+        +   '<button class="link-btn" data-action="delete" data-id="'+r.id+'" style="color:var(--risk-high);">Delete</button>'
+        + '</div>'
+        + '</div>';
+    }).join("");
+
+    $all('.link-btn[data-action="view"]').forEach(function(btn){
+      btn.addEventListener("click", async function(){
+        var r = await storeGet("history:"+btn.dataset.id);
+        if(r){
+          renderResult({ score:r.score, level:r.level, categories:r.categories, flags:r.flags, explanation:r.explanation, urlNote:r.urlNote, jobTitle: r.jobTitle==="Not detected"?null:r.jobTitle }, r.inputType);
+          showView("result");
+        }
+      });
+    });
+    $all('.link-btn[data-action="delete"]').forEach(function(btn){
+      btn.addEventListener("click", async function(){
+        await storeDelete("history:"+btn.dataset.id);
+        renderHistory();
+      });
+    });
+  }
+
+  $("#clear-history-btn").addEventListener("click", async function(){
+    if(!confirm("Clear all scan history? This cannot be undone.")) return;
+    var keys = await storeListKeys("history:");
+    for(var i=0;i<keys.length;i++){ await storeDelete(keys[i]); }
+    renderHistory();
+  });
+
+  /* ============================================================
+     15. CHAT ASSISTANT (rule-based, context-aware, no external calls)
+     ============================================================ */
+  var chatOpen = false;
+  var SENSITIVE_PATTERN = /\b(otp|password|cvv|pin\s?code|card number|bank account|ifsc|aadhaar|aadhar|ssn)\b/i;
+
+  function openChat(){
+    chatOpen = true;
+    $("#chat-panel").style.display = "flex";
+    $("#chat-fab").style.display = "none";
+    if($("#chat-body").children.length === 0){
+      addBotMessage("Hi! I'm GatekeepeRShield AI. I can help you understand suspicious job offers, scam warnings, and online safety.");
+      renderQuickActions();
+    }
+  }
+  function closeChat(){
+    chatOpen = false;
+    $("#chat-panel").style.display = "none";
+    $("#chat-fab").style.display = "flex";
+  }
+  $("#chat-fab").addEventListener("click", openChat);
+  $("#chat-close").addEventListener("click", closeChat);
+
+  function addBotMessage(text){
+    var div = document.createElement("div");
+    div.className = "msg bot";
+    div.textContent = text;
+    $("#chat-body").appendChild(div);
+    $("#chat-body").scrollTop = $("#chat-body").scrollHeight;
+  }
+  function addUserMessage(text){
+    var div = document.createElement("div");
+    div.className = "msg user";
+    div.textContent = text;
+    $("#chat-body").appendChild(div);
+    $("#chat-body").scrollTop = $("#chat-body").scrollHeight;
+  }
+
+  var QUICK_ACTIONS = ["Why is this risky?","What should I do now?","Which red flags were detected?","How can I verify this job?","How do I report a scam?"];
+  function renderQuickActions(){
+    $("#quick-actions").innerHTML = QUICK_ACTIONS.map(function(q){ return '<button class="qa-btn">'+escapeHtml(q)+'</button>'; }).join("");
+    $all(".qa-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        addUserMessage(btn.textContent);
+        respondTo(btn.textContent);
+      });
+    });
+  }
+
+  function respondTo(message){
+    var msg = message.toLowerCase();
+    var a = state.currentAnalysis;
+
+    if(SENSITIVE_PATTERN.test(message)){
+      addBotMessage("Please do not share passwords, OTPs, banking credentials, or other sensitive information here.");
+      return;
+    }
+
+    if(!a){
+      if(/report/.test(msg)){
+        addBotMessage("You can report job fraud in India via the National Cyber Crime Reporting Portal (cybercrime.gov.in) or by calling the helpline 1930. Keep screenshots and payment records as evidence.");
+      } else if(/verify/.test(msg)){
+        addBotMessage("Run a scan first so I can give you specific guidance — but in general: check the company's official website, call their listed phone number, and never rely only on contact details given by the recruiter.");
+      } else {
+        addBotMessage("Run a Gatekeeper Risk Scan first, and I'll be able to explain the specific result with you.");
+      }
+      return;
+    }
+
+    if(/why.*risk|risky/.test(msg)){
+      addBotMessage(a.explanation);
+    } else if(/what should i do|now\?/.test(msg)){
+      var recs = getSafetyRecommendations(a.level, a.flags);
+      addBotMessage(recs.slice(0,4).join(" "));
+    } else if(/red flag|detected/.test(msg)){
+      if(a.flags.length === 0){
+        addBotMessage("No significant red flags were detected in this content.");
+      } else {
+        addBotMessage("Detected red flags: " + a.flags.map(function(f){return f.label;}).join("; ") + ".");
+      }
+    } else if(/verify/.test(msg)){
+      addBotMessage("Check the employer through its official website and a phone number you find independently — not one given in the message. Confirm the role is listed on their real careers page before sharing any information.");
+    } else if(/report/.test(msg)){
+      addBotMessage("You can report job fraud in India via the National Cyber Crime Reporting Portal (cybercrime.gov.in) or by calling the helpline 1930. Keep screenshots and payment records as evidence.");
+    } else if(/legit|safe|scam\?|is this real/.test(msg)){
+      addBotMessage("I can't guarantee whether this job is genuine or fraudulent — but based on what was submitted, it scored " + a.score + "/100 (" + RISK_LABELS[a.level] + "). " + a.explanation);
+    } else {
+      addBotMessage("I can help explain your risk score, the red flags detected, safety steps, or how to report a scam. Try one of the quick actions above, or ask me directly about this result.");
+    }
+  }
+
+  $("#chat-send").addEventListener("click", sendChat);
+  $("#chat-input").addEventListener("keydown", function(e){ if(e.key==="Enter") sendChat(); });
+  function sendChat(){
+    var input = $("#chat-input");
+    var val = input.value.trim();
+    if(!val) return;
+    addUserMessage(val);
+    input.value = "";
+    respondTo(val);
+  }
+
+  /* ============================================================
+     16. INIT
+     ============================================================ */
+  renderSamples();
+  showView("home");
+
+})();
+</script>
+</body>
+</html>
