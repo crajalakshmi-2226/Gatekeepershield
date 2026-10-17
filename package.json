@@ -1,0 +1,9 @@
+{
+  "name": "gatekeepershield",
+  "version": "2.0.0",
+  "private": true,
+  "description": "GatekeepeRShield — AI Anti-Scam Detector with official job listing, company, and location verification.",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
